@@ -56,7 +56,14 @@ app.get('/users', (req, res) => {
   db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
 });
 
-
+app.get('/users', (req, res) => {
+  const filter = req.query.filter || '';
+  db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
+});
+app.get('/users', (req, res) => {
+  const filter = req.query.filter || '';
+  db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
+});
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
