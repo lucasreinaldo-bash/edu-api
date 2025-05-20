@@ -1,12 +1,11 @@
 const express = require('express');
+const jsonwebtoken = require('jsonwebtoken');
 
 const app = express();
 app.use(express.json());
 
 // Rota de emissão de token (permanece disponível para testes)
-const jsonwebtoken = require('jsonwebtoken');
 const SECRET_KEY = process.env.SECRET_KEY || 'edu_learn_secret';
-
 app.get('/token', (req, res) => {
   const user = req.query.user || 'guest';
   const role = req.query.role || 'professor';
@@ -15,57 +14,50 @@ app.get('/token', (req, res) => {
   res.json({ token });
 });
 
-// Ação de teste sem JWT: rota aberta, sem middleware de proteção
+/**
+ * Vulnerabilidade 1: SQL Injection
+ * Simula uma consulta que concatena diretamente o input.
+ * Exemplo de exploração:
+ *   GET /users?filter=' OR '1'='1
+ */
 app.get('/users', (req, res) => {
-  res.json([
-    {
-      id: 1,
-      name: 'Alice Silva',
-      role: 'professora',
-      email: 'alice.silva@edulearn.com',
-      dateOfBirth: '12/04/1998',
-      cpf: '12345678901',
-      department: 'Ciência da Computação',
-      salary: 'R$ 4.500,00'
-    },
-    {
-      id: 2,
-      name: 'Lucas Reinaldo',
-      role: 'professor',
-      email: 'lucas.reinaldo@edulearn.com',
-      dateOfBirth: '23/11/1985',
-      cpf: '98765432100',
-      department: 'Matemática',
-      salary: 'R$ 6.200,00'
-    },
-    {
-      id: 3,
-      name: 'Carla Oliveira',
-      role: 'professora',
-      email: 'carla.oliveira@edulearn.com',
-      dateOfBirth: '30/07/2000',
-      cpf: '13579246800',
-      department: 'Química',
-      salary: 'R$ 5.000,00'
-    }
-  ]);
+  const filter = req.query.filter || '';
+  const unsafeQuery = `SELECT * FROM users WHERE name LIKE '%${filter}%';`;
+  // Aqui você devolveria o resultado do banco; para fins de demonstração,
+  // retornamos o "SQL" gerado.
+  res.json({ query: unsafeQuery });
 });
 
-app.get('/users', (req, res) => {
-  const filter = req.query.filter || '';
-  db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
+/**
+ * Vulnerabilidade 2: XSS refletido
+ * Exibe o input sem escape, permitindo <script>inject.
+ * Exemplo de exploração:
+ *   GET /greet?name=<script>alert('XSS')</script>
+ */
+app.get('/greet', (req, res) => {
+  const name = req.query.name || 'visitante';
+  res.send(`<h1>Olá, ${name}!</h1>`);
 });
 
-app.get('/users', (req, res) => {
-  const filter = req.query.filter || '';
-  db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
+/**
+ * Vulnerabilidade 3: Command/Code Injection via eval
+ * Executa arbitrariamente a expressão JS enviada.
+ * Exemplo de exploração:
+ *   GET /calc?expr=process.exit()
+ */
+app.get('/calc', (req, res) => {
+  const expr = req.query.expr || '2+2';
+  let result;
+  try {
+    result = eval(expr);
+  } catch (e) {
+    result = `Erro na expressão: ${e.message}`;
+  }
+  res.json({ expression: expr, result });
 });
-app.get('/users', (req, res) => {
-  const filter = req.query.filter || '';
-  db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
-});
+
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`EduLearn User Service (teste sem JWT) rodando na porta ${PORT}`);
+  console.log(`EduLearn User Service (vulnerável) rodando na porta ${PORT}`);
 });
