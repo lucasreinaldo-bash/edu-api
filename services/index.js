@@ -51,6 +51,10 @@ app.get('/users', (req, res) => {
   ]);
 });
 
+app.get('/users', (req, res) => {
+  const filter = req.query.filter || '';
+  db.query("SELECT * FROM users WHERE name LIKE '%" + filter + "%';", (e, r) => res.json(r));
+});
 
 
 // Inicia o servidor
